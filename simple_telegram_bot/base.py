@@ -16,7 +16,7 @@ BASE_URL = 'https://api.telegram.org/bot{token}/{method}'
 class Bot:
     def __init__(self, bot_token: str):
         self.bot_token: str = bot_token
-        self.bot_info: User = None
+        self.bot_info: User | None = None
 
     async def __send_request(
             self,
@@ -79,7 +79,17 @@ class Bot:
         while True:
             try:
                 update_info = await self.__send_request('getUpdates')
-                print(update_info)
+                if update_info['ok']:
+                    result = update_info['result']
+                    if result:
+                        ...
+                else:
+                    message = (f'BOT API ERROR: Code '
+                               f'{update_info["error_code"]}'
+                               f'Description {update_info["description"]}'
+                               )
+                    print(message)
+                # print(update_info)
             except KeyboardInterrupt:
                 break
             except Exception as e:
