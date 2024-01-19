@@ -4,13 +4,12 @@ from http import HTTPStatus
 import aiohttp
 import asyncio
 
+from constants import BASE_URL, GET_UPDATES_DELAY
 from .structures import User
 from .exeptions import (
     BotGetDataErrorException,
     BotResponseStructureErrorException
 )
-
-BASE_URL = 'https://api.telegram.org/bot{token}/{method}'
 
 
 class Bot:
@@ -95,7 +94,7 @@ class Bot:
             except Exception as e:
                 print(f'ERROR: {e}')
             finally:
-                await asyncio.sleep(1)
+                await asyncio.sleep(GET_UPDATES_DELAY)
 
     def run(self):
         try:
