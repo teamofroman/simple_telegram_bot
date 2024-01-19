@@ -4,12 +4,14 @@ from http import HTTPStatus
 import aiohttp
 import asyncio
 
-from constants import BASE_URL, GET_UPDATES_DELAY
+from .constants import BASE_URL, GET_UPDATES_DELAY
+from .logger import logger
 from .structures import User
 from .exeptions import (
     BotGetDataErrorException,
     BotResponseStructureErrorException
 )
+from .updaters import process_updater_data
 
 
 class Bot:
@@ -20,15 +22,23 @@ class Bot:
     async def __send_request(
             self,
             method: str,
-            data: str | None = None,
+            data: str | dict | None = None,
     ):
         url = BASE_URL.format(token=self.bot_token, method=method)
+        headers = {
+            'Content-Type': 'application/json',
+        }
+
         if not data:
             data = {}
 
         async with aiohttp.ClientSession() as session:
             try:
-                response = await session.post(url, data=json.dumps(data))
+                response = await session.post(
+                    url,
+                    headers=headers,
+                    data=json.dumps(data)
+                )
             except Exception as e:
                 response = None
                 print(e)
@@ -75,24 +85,34 @@ class Bot:
 
     async def __async_run(self):
         self.bot_info = await self.__get_bot_info()
+        if not self.bot_info:
+            logger.warning('Can not get bot info')
+        else:
+            logger.info(f'Bot has started. ID: {self.bot_info.id}')
+
+        data = {}
         while True:
             try:
-                update_info = await self.__send_request('getUpdates')
+                update_info = await self.__send_request(
+                    'getUpdates',
+                    data=data,
+                )
                 if update_info['ok']:
                     result = update_info['result']
                     if result:
-                        ...
+                        last_update_id = await process_updater_data(result)
+                        data['offset'] = last_update_id + 1
                 else:
                     message = (f'BOT API ERROR: Code '
                                f'{update_info["error_code"]}'
                                f'Description {update_info["description"]}'
                                )
-                    print(message)
+                    logger.error(message)
                 # print(update_info)
             except KeyboardInterrupt:
                 break
             except Exception as e:
-                print(f'ERROR: {e}')
+                logger.error(f'ERROR: {e}')
             finally:
                 await asyncio.sleep(GET_UPDATES_DELAY)
 
